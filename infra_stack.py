@@ -1,5 +1,6 @@
 import aws_cdk as cdk
 from aws_cdk import Stack, CfnOutput
+from aws_cdk import aws_ec2 as ec2
 from aws_cdk import aws_rds as rds
 from aws_cdk.aws_msk_alpha import Cluster as MskCluster, KafkaVersion
 from constructs import Construct
