@@ -15,10 +15,14 @@ class InfraStack(Stack):
         # Security group for Aurora
         aurora_sg = ec2.SecurityGroup(self, f'aurora-sg-{env_type}', vpc=vpc)
 
+        engine = rds.DatabaseClusterEngine.aurora_postgres(
+            version=rds.AuroraPostgresEngineVersion.VER_15_3
+        )
+
         # Aurora Serverless v2 cluster
         db_cluster = rds.ServerlessCluster(
             self, f"traidio-aurora-{env_type}",
-            engine=rds.DatabaseClusterEngine.AURORA_POSTGRESQL,
+            engine=engine,
             vpc=vpc,
             scaling=rds.ServerlessScalingOptions(
                 auto_pause=cdk.Duration.minutes(10),
