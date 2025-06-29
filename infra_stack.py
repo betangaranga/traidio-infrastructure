@@ -1,7 +1,7 @@
 from aws_cdk import Stack, CfnOutput
 from aws_cdk import aws_ec2 as ec2
 from aws_cdk import aws_rds as rds
-from aws_cdk import aws_msk as msk
+from aws_cdk.aws_msk_alpha import Cluster as MskCluster, KafkaVersion
 from constructs import Construct
 
 class InfraStack(Stack):
@@ -12,56 +12,45 @@ class InfraStack(Stack):
         # Example: dev vs prod sizing
         if env_type == "dev":
             instance_size = ec2.InstanceSize.MICRO
-            broker_nodes = 2
         else:
             instance_size = ec2.InstanceSize.MEDIUM
-            broker_nodes = 3
 
         # VPC
-        vpc = ec2.Vpc(self, f"Vpc-{env_type}",
-                      max_azs=2)
+        vpc = ec2.Vpc(self, f"vpc-{env_type}", max_azs=2)
 
-        # RDS SG
-        rds_sg = ec2.SecurityGroup(self, f"RdsSg-{env_type}", vpc=vpc)
+        # Security group for Aurora
+        aurora_sg = ec2.SecurityGroup(self, f'aurora-sg-{env_type}', vpc=vpc)
 
-        # MSK SG
-        msk_sg = ec2.SecurityGroup(self, f"MskSg-{env_type}", vpc=vpc)
-
-        # RDS instance
-        db_instance = rds.DatabaseInstance(
-            self, f"PostgresInstance-{env_type}",
-            engine=rds.DatabaseInstanceEngine.postgres(
-                version=rds.PostgresEngineVersion.VER_15
-            ),
-            instance_type=ec2.InstanceType.of(
-                ec2.InstanceClass.BURSTABLE3, instance_size
-            ),
+        # Aurora Serverless v2 cluster
+        db_cluster = rds.ServerlessCluster(
+            self, f"traidio-aurora-{env_type}",
+            engine=rds.DatabaseClusterEngine.AURORA_POSTGRESQL,
             vpc=vpc,
-            security_groups=[rds_sg],
-            allocated_storage=20,
-            multi_az=False,
-            publicly_accessible=False,
+            scaling=rds.ServerlessScalingOptions(
+                auto_pause=cdk.Duration.minutes(10),
+                min_capacity=rds.AuroraCapacityUnit.ACU_2,
+                max_capacity=rds.AuroraCapacityUnit.ACU_8
+            ),
+            security_groups=[aurora_sg],
             vpc_subnets=ec2.SubnetSelection(subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS),
-            credentials=rds.Credentials.from_generated_secret("postgres")
+            default_database_name="traidio"
         )
 
-        # MSK cluster
-        msk_cluster = msk.CfnCluster(
-            self, f"MskCluster-{env_type}",
-            cluster_name=f"MyKafkaCluster-{env_type}",
-            kafka_version="3.5.1",
-            number_of_broker_nodes=broker_nodes,
-            broker_node_group_info=msk.CfnCluster.BrokerNodeGroupInfoProperty(
-                client_subnets=vpc.select_subnets(
-                    subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS
-                ).subnet_ids,
-                instance_type="kafka.m5.large",
-                security_groups=[msk_sg.security_group_id],
-            )
+        # MSK Serverless cluster
+        msk_cluster = MskCluster(
+            self, f"sls-cluster-{env_type}",
+            cluster_name=f"traidio-kafka-{env_type}",
+            kafka_version=KafkaVersion.V2_8_1,
+            vpc=vpc,
+            vpc_subnets=ec2.SubnetSelection(subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS),
+            serverless=True
         )
 
-        CfnOutput(self, "PostgresEndpoint",
-                  value=db_instance.db_instance_endpoint_address)
+        CfnOutput(self, "AuroraClusterEndpoint",
+                  value=db_cluster.cluster_endpoint.hostname)
 
         CfnOutput(self, "MskClusterArn",
-                  value=msk_cluster.ref)
+                  value=msk_cluster.cluster_arn)
+
+        CfnOutput(self, "MskBootstrapBrokers",
+                  value=msk_cluster.bootstrap_brokers)
