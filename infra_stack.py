@@ -2,7 +2,7 @@ import aws_cdk as cdk
 from aws_cdk import Stack, CfnOutput
 from aws_cdk import aws_ec2 as ec2
 from aws_cdk import aws_rds as rds
-from aws_cdk.aws_msk_alpha import Cluster as MskCluster, KafkaVersion
+from aws_cdk import aws_msk as msk
 from constructs import Construct
 
 class InfraStack(Stack):
@@ -35,13 +35,25 @@ class InfraStack(Stack):
         )
 
         # MSK Serverless cluster
-        msk_cluster = MskCluster(
-            self, f"sls-cluster-{env_type}",
-            cluster_name=f"traidio-kafka-{env_type}",
-            kafka_version=KafkaVersion.V2_8_1,
-            vpc=vpc,
-            vpc_subnets=ec2.SubnetSelection(subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS),
-            serverless=True
+        # Security group for MSK
+        msk_sg = ec2.SecurityGroup(self, f"msk-sg-{env_type}", vpc=vpc)
+
+        msk_cluster = msk.CfnServerlessCluster(
+            self, "MyServerlessCluster",
+            cluster_name="my-serverless-msk",
+            client_authentication={
+                "sasl": {
+                    "iam": {
+                        "enabled": True
+                    }
+                }
+            },
+            vpc_configs=[{
+                "subnet_ids": vpc.select_subnets(
+                    subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS
+                ).subnet_ids,
+                "security_groups": [msk_sg.security_group_id]
+            }]
         )
 
         CfnOutput(self, "AuroraClusterEndpoint",
