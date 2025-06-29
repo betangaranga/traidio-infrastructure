@@ -1,5 +1,5 @@
+import aws_cdk as cdk
 from aws_cdk import Stack, CfnOutput
-from aws_cdk import aws_ec2 as ec2
 from aws_cdk import aws_rds as rds
 from aws_cdk.aws_msk_alpha import Cluster as MskCluster, KafkaVersion
 from constructs import Construct
@@ -8,13 +8,6 @@ class InfraStack(Stack):
 
     def __init__(self, scope: Construct, construct_id: str, env_type: str, **kwargs):
         super().__init__(scope, construct_id, **kwargs)
-
-        # Example: dev vs prod sizing
-        if env_type == "dev":
-            instance_size = ec2.InstanceSize.MICRO
-        else:
-            instance_size = ec2.InstanceSize.MEDIUM
-
         # VPC
         vpc = ec2.Vpc(self, f"vpc-{env_type}", max_azs=2)
 
