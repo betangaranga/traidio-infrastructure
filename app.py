@@ -13,6 +13,10 @@ if env_type not in ["dev", "prod"]:
 account = app.node.try_get_context("account")
 region = app.node.try_get_context("region")
 
+if not account or not region:
+    raise ValueError(f"Missing context values: account={account}, region={region}")
+
+print(f"account {account} region {region}")
 env = cdk.Environment(
     account=account,
     region=region
