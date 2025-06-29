@@ -36,24 +36,26 @@ class InfraStack(Stack):
 
         # MSK Serverless cluster
         # Security group for MSK
+        # ✅ Define MSK security group if you haven’t
         msk_sg = ec2.SecurityGroup(self, f"msk-sg-{env_type}", vpc=vpc)
 
+        # ✅ Define Serverless MSK cluster using CfnServerlessCluster
         msk_cluster = msk.CfnServerlessCluster(
-            self, "MyServerlessCluster",
-            cluster_name="my-serverless-msk",
-            client_authentication={
-                "sasl": {
-                    "iam": {
-                        "enabled": True
-                    }
-                }
-            },
-            vpc_configs=[{
-                "subnet_ids": vpc.select_subnets(
-                    subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS
-                ).subnet_ids,
-                "security_groups": [msk_sg.security_group_id]
-            }]
+            self, f"msk-sls-{env_type}",
+            cluster_name=f"traidio-kafka-{env_type}",
+            client_authentication=msk.CfnServerlessCluster.ClientAuthenticationProperty(
+                sasl=msk.CfnServerlessCluster.SaslProperty(
+                    iam=msk.CfnServerlessCluster.IamProperty(enabled=True)
+                )
+            ),
+            vpc_configs=[
+                msk.CfnServerlessCluster.VpcConfigProperty(
+                    subnet_ids=vpc.select_subnets(
+                        subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS
+                    ).subnet_ids,
+                    security_groups=[msk_sg.security_group_id]
+                )
+            ]
         )
 
         CfnOutput(self, "AuroraClusterEndpoint",
