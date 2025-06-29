@@ -9,9 +9,13 @@ if env_type not in ["dev", "prod"]:
     raise ValueError("Context variable missing: use -c env=dev or -c env=prod")
 
 # Hardcode account & region or read from env vars
+
+account = app.node.try_get_context("account")
+region = app.node.try_get_context("region")
+
 env = cdk.Environment(
-    account="123456789012",
-    region="us-east-1"
+    account=account,
+    region=region
 )
 
 InfraStack(app, f"MyInfraStack-{env_type}",
