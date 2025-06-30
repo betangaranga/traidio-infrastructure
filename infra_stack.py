@@ -39,10 +39,10 @@ class InfraStack(Stack):
                 security_groups=[aurora_sg],
                 vpc_subnets=ec2.SubnetSelection(subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS)
             ),
-            serverless_v2_scaling_configuration=rds.ServerlessV2ScalingConfiguration(
-                min_capacity=0.5,
-                max_capacity=128.0
-            ),
+            serverless_v2_scaling_configuration={
+                "min_capacity": 0.5,
+                "max_capacity": 128.0
+            },
             default_database_name="traidio"
         )
 
