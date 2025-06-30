@@ -25,25 +25,19 @@ class InfraStack(Stack):
         )
 
         # ✅ Aurora Serverless v2 Postgres
-        db_cluster = rds.DatabaseCluster(
+        db_cluster = rds.CfnDBCluster(
             self, f"traidio-aurora-{env_type}",
-            engine=rds.DatabaseClusterEngine.aurora_postgres(
-                version=rds.AuroraPostgresEngineVersion.VER_15_7  # ✅ match your Console exactly
-            ),
-            instances=1,
-            instance_props=rds.InstanceProps(
-                instance_type=ec2.InstanceType.of(
-                    ec2.InstanceClass.BURSTABLE3, ec2.InstanceSize.SMALL  # Dummy type; overridden
-                ),
-                vpc=vpc,
-                security_groups=[aurora_sg],
-                vpc_subnets=ec2.SubnetSelection(subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS)
-            ),
+            engine="aurora-postgresql",
+            engine_version="15.7",
+            database_name="traidio",
+            master_username="postgres",
+            master_user_password="MyStrongPassword123",  # Or better: use Secrets Manager!
+            db_subnet_group_name="YOUR-DB-SUBNET-GROUP-NAME",
+            vpc_security_group_ids=[aurora_sg.security_group_id],
             serverless_v2_scaling_configuration={
-                "min_capacity": 0.5,
-                "max_capacity": 128.0
-            },
-            default_database_name="traidio"
+                "MinCapacity": 0.5,
+                "MaxCapacity": 128.0
+            }
         )
 
         # ✅ Outputs
