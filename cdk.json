@@ -1,7 +1,6 @@
 {
   "app": "python app.py",
   "context": {
-    "env": "dev",
-    "aws:region": "us-east-2"
+    "env": "dev"
   }
 }
