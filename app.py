@@ -11,7 +11,7 @@ if env_type not in ["dev", "prod"]:
 
 # Hardcode account & region or read from env vars
 
-account = app.node.try_get_context("account")
+account = app.node.try_get_context("account") or os.environ.get("AWS_ACCOUNT_DEV")
 region  = app.node.try_get_context("region") or os.environ.get("AWS_DEFAULT_REGION")
 
 

@@ -1,7 +1,9 @@
 from aws_cdk import (
     Stack,
     aws_ec2 as ec2,
-    aws_rds as rds
+    aws_rds as rds,
+    aws_secretsmanager as secretsmanager,
+    CfnOutput
 )
 from constructs import Construct
 
@@ -9,50 +11,53 @@ class InfraStack(Stack):
     def __init__(self, scope: Construct, construct_id: str, env_type: str, **kwargs):
         super().__init__(scope, construct_id, **kwargs)
 
-        # Example: dev vs prod sizing
-        if env_type == "dev":
-            min_acu = 0.5
-            max_acu = 2.0
-        elif env_type == "prod":
-            min_acu = 1.0
-            max_acu = 4.0
-        else:
-            raise ValueError(f"Unsupported env_type: {env_type}")
+        # 🟢 1️⃣ VPC (2 AZs, good practice)
+        vpc = ec2.Vpc(self, f"vpc-{env_type}", max_azs=2)
 
-        # 1️⃣ VPC with 2 AZs
-        vpc = ec2.Vpc(
-            self, f"vpc-{env_type}",
-            max_azs=2
-        )
-
-        # 2️⃣ Security Group
-        rds_sg = ec2.SecurityGroup(
+        # 🟢 2️⃣ Security Group (PostgreSQL port)
+        sg = ec2.SecurityGroup(
             self, f"rds-sg-{env_type}",
             vpc=vpc,
-            description="Allow database access",
+            description="Allow PostgreSQL access",
             allow_all_outbound=True
         )
-        rds_sg.add_ingress_rule(
+        sg.add_ingress_rule(
             peer=ec2.Peer.any_ipv4(),
             connection=ec2.Port.tcp(5432),
-            description="Allow PostgreSQL access"
+            description="Allow PostgreSQL connections"
         )
 
-        # 3️⃣ Aurora Serverless v2 Cluster
-        cluster = rds.DatabaseCluster(
-            self, f"aurora-cluster-{env_type}",
-            engine=rds.DatabaseClusterEngine.aurora_postgres(
-                version=rds.AuroraPostgresEngineVersion.VER_15_3
+        # 🟢 3️⃣ Secrets Manager for DB credentials
+        db_secret = secretsmanager.Secret(
+            self, f"rds-secret-{env_type}",
+            generate_secret_string=secretsmanager.SecretStringGenerator(
+                secret_string_template='{"username":"masteruser"}',
+                generate_string_key="password",
+                exclude_punctuation=True
+            )
+        )
+
+        # 🟢 4️⃣ Single-node RDS PostgreSQL instance
+        db_instance = rds.DatabaseInstance(
+            self, f"rds-instance-{env_type}",
+            engine=rds.DatabaseInstanceEngine.postgres(
+                version=rds.PostgresEngineVersion.VER_15
             ),
-            writer=rds.ClusterInstance.serverless_v2(
-                f"writer-instance-{env_type}",
-                scaling=rds.ServerlessV2ScalingConfiguration(
-                    min_capacity=min_acu,
-                    max_capacity=max_acu
-                ),
-                publicly_accessible=True  # for test, use private subnets in prod!
+            instance_type=ec2.InstanceType.of(
+                ec2.InstanceClass.BURSTABLE4_GRAVITON,  # Cheapest burstable option
+                ec2.InstanceSize.MICRO
             ),
             vpc=vpc,
-            security_groups=[rds_sg],
-            default_database_name="traidio"
+            credentials=rds.Credentials.from_secret(
+                db_secret
+            ),
+            multi_az=False,  # Single AZ — cheaper
+            allocated_storage=20,  # 20 GiB — minimum
+            max_allocated_storage=100,  # Allows storage autoscaling
+            security_groups=[sg],
+            publicly_accessible=True,  # Good practice: use Bastion or VPN if needed
+            backup_retention=None  # Defaults to 7 days
         )
+
+        # 🟢 5️⃣ Output the secret ARN for your app or IAM policy
+        CfnOutput(self, f"rds-secret-arn-{env_type}", value=db_secret.secret_arn)
