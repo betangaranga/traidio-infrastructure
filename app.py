@@ -11,9 +11,9 @@ if env_type not in ["dev", "prod"]:
 # Hardcode account & region or read from env vars
 
 account = app.node.try_get_context("account")
-region = app.node.try_get_context("region")
+region = "us-east-1"
 
-if not account or not region:
+if not account:
     raise ValueError(f"Missing context values: account={account}, region={region}")
 
 print(f"account {account} region {region}")
