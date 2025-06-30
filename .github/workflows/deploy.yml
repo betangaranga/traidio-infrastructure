@@ -60,6 +60,6 @@ jobs:
           AWS_REGION_DEV: us-east-1
           AWS_ACCOUNT_DEV: ${{ secrets.AWS_ACCOUNT_DEV }}
           AWS_ACCOUNT_PROD: ${{ secrets.AWS_ACCOUNT_PROD }}
-          AWS_DEFAULT_REGION: ${{ secrets.AWS_REGION_DEV }}
-          AWS_REGION: ${{ secrets.AWS_REGION_DEV }}
+          AWS_DEFAULT_REGION: ${{ secrets.AWS_REGION }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
 
