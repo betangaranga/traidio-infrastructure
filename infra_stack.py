@@ -12,7 +12,7 @@ class InfraStack(Stack):
 
         # ✅ Create VPC with DNS support (good for MSK and RDS)
         vpc = ec2.Vpc(
-            self, f"Vpc-{env_type}",
+            self, f"vpc-{env_type}",
             max_azs=2,
             enable_dns_support=True,
             enable_dns_hostnames=True
@@ -29,7 +29,7 @@ class InfraStack(Stack):
         db_cluster = rds.ServerlessCluster(
             self, f"traidio-aurora-{env_type}",
             engine=rds.DatabaseClusterEngine.aurora_postgres(
-                version=rds.AuroraPostgresEngineVersion.VER_15_3
+                version=rds.AuroraPostgresEngineVersion.VER_14_6
             ),
             vpc=vpc,
             scaling=rds.ServerlessScalingOptions(
