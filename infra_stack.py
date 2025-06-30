@@ -28,9 +28,7 @@ class InfraStack(Stack):
         # ✅ Aurora Serverless v2 Postgres
         db_cluster = rds.ServerlessCluster(
             self, f"traidio-aurora-{env_type}",
-            engine=rds.DatabaseClusterEngine.aurora_postgres(
-                version=rds.AuroraPostgresEngineVersion.VER_15_7
-            ),
+            engine=rds.DatabaseClusterEngine.AURORA_POSTGRESQL,
             vpc=vpc,
             scaling=rds.ServerlessScalingOptions(
                 auto_pause=cdk.Duration.minutes(10),
