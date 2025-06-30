@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import os
 import aws_cdk as cdk
 from infra_stack import InfraStack
 
@@ -11,7 +12,8 @@ if env_type not in ["dev", "prod"]:
 # Hardcode account & region or read from env vars
 
 account = app.node.try_get_context("account")
-region = "us-east-1"
+region  = app.node.try_get_context("region") or os.environ.get("AWS_DEFAULT_REGION")
+
 
 if not account:
     raise ValueError(f"Missing context values: account={account}, region={region}")
@@ -22,7 +24,7 @@ env = cdk.Environment(
     region=region
 )
 
-InfraStack(app, f"MyInfraStack-{env_type}",
+InfraStack(app, f"infra-{env_type}",
            env=env,
            env_type=env_type)
 
